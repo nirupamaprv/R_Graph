@@ -1,0 +1,91 @@
+---
+title: "GRaph3"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```
+```
+
+```{r}
+library(tidyverse)
+library(readxl) 
+letters <- read_excel("QuickData.xlsx")
+
+letters
+```
+
+```{r}
+#nodes<- full_join(distinct(letters[1]), distinct(letters[2]))
+sources <- letters %>%
+  distinct(NAMES) %>%
+  rename(label = NAMES)
+
+destinations <- letters %>%
+  distinct(ACCOUNT) %>%
+  rename(label = ACCOUNT)
+
+nodes <- full_join(sources, destinations, by = "label")
+nodes
+```
+
+```{r}
+nodes <- nodes %>% rowid_to_column("id")
+nodes
+```
+```{r}
+per_route <- letters %>%  
+  group_by(NAMES, ACCOUNT) %>%
+  summarise(weight = n()) %>% 
+  ungroup()
+per_route
+```
+```{r}
+edges <- per_route %>% 
+  left_join(nodes, by = c("NAMES" = "label")) %>% 
+  rename(from = id)
+
+edges <- edges %>% 
+  left_join(nodes, by = c("ACCOUNT" = "label")) %>% 
+  rename(to = id)
+
+edges <- select(edges, from, to, weight)
+edges
+```
+```{r}
+library(network)
+routes_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+
+class(routes_network)
+routes_network
+```
+
+```
+
+
+```{r 'setup', echo = FALSE, cache = FALSE, fig.width=8, fig.height=10}
+library('knitr')
+opts_chunk$set(dev = c('pdf', 'jpeg'), 
+        fig.align = 'center', 
+        pdf.options(encoding = "ISOLatin9.enc"))
+
+
+jpeg(file = "DataPoints.jpeg")
+
+plot(routes_igraph, layout = layout_with_graphopt)
+dev.off()
+
+
+```
+
